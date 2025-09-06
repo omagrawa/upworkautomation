@@ -1,34 +1,21 @@
 {
   "name": "@upwork-auto/apify-scraper",
   "version": "1.0.0",
-  "description": "Apify actor for scraping Upwork job listings using Playwright and Cheerio",
-  "main": "src/main.js",
+  "description": "Production-ready Apify actor for scraping Upwork job listings with CheerioCrawler and PlaywrightCrawler",
+  "main": "main.js",
   "type": "module",
   "scripts": {
-    "start": "node src/main.js",
-    "dev": "node --watch src/main.js",
+    "start": "node main.js",
+    "dev": "node --watch main.js",
     "build": "echo 'No build step required'",
     "clean": "rm -rf .apify dist"
   },
   "dependencies": {
     "apify": "^3.1.10",
-    "playwright": "^1.40.0",
     "cheerio": "^1.0.0-rc.12",
-    "axios": "^1.6.0"
+    "playwright": "^1.40.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0"
-  },
-  "apify": {
-    "actorSpecification": 1,
-    "name": "upwork-job-scraper",
-    "title": "Upwork Job Scraper",
-    "description": "Scrapes Upwork job listings and sends data to webhook",
-    "version": "1.0.0",
-    "meta": {
-      "templateId": "playwright-js"
-    },
-    "input": "./input_schema.json",
-    "dockerfile": "./Dockerfile"
   }
 }

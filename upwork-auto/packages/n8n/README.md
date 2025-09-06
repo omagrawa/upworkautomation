@@ -1,181 +1,343 @@
-# n8n Workflow Package
+# n8n Upwork Automation Workflow
 
-This package contains the n8n workflow configuration for the Upwork automation pipeline, including job scoring, proposal generation, and integration with Google Sheets and Apify actors.
+This package contains a comprehensive n8n workflow for processing Upwork job data from Apify scrapers, scoring jobs with AI, generating proposals, and optionally auto-submitting them.
 
 ## Purpose
 
-- Receives scraped job data from Apify scraper via webhook
-- Scores jobs based on budget, skills, client quality, and competition
+- Processes job data from Apify scrapers via webhook
+- Merges list and detail job data intelligently
+- Scores jobs using OpenAI for DevOps/AI/n8n expertise
 - Generates personalized proposals for high-scoring jobs
 - Logs all processed jobs to Google Sheets
-- Triggers Apify submitter for auto-submission
-- Provides comprehensive workflow orchestration
+- Optionally triggers auto-submission via Apify actors
 
-## Features
+## Workflow Overview
 
-- **Webhook Integration**: Receives job data from Apify scraper
-- **Smart Job Scoring**: Multi-criteria scoring algorithm (0-100 points)
-- **Proposal Generation**: AI-powered proposal content creation
-- **Google Sheets Logging**: Comprehensive job tracking and analytics
-- **Auto-Submission**: Triggers Apify actor for proposal submission
-- **Error Handling**: Robust error handling and logging
-- **Configurable**: Easy to modify scoring criteria and thresholds
-
-## Commands
-
-```bash
-# Deploy workflow to n8n instance
-pnpm deploy
-
-# Export existing workflows from n8n
-pnpm export
-
-# Development (n8n runs via Docker Compose)
-pnpm dev
-
-# Build (no build step required)
-pnpm build
-
-# Clean exports
-pnpm clean
+```
+Webhook → Fetch Apify Data → Merge Jobs → Store → AI Score → Generate Proposal → Log → Auto Submit
 ```
 
-## Workflow Structure
+### Node Flow
+1. **Webhook Trigger** - Receives datasetId from Apify scraper
+2. **Fetch Apify Dataset** - Retrieves job data from Apify API
+3. **Merge Job Data** - Combines list and detail data by jobUrl
+4. **Storage Target Check** - Routes to PostgreSQL or Google Sheets
+5. **OpenAI Lead Score** - Scores jobs 0-100 for DevOps/AI expertise
+6. **Score Threshold Check** - Continues only if score >= 70
+7. **OpenAI Proposal Draft** - Generates 120-180 word proposals
+8. **Log to Google Sheets** - Records all processed jobs
+9. **Auto Submit Check** - Optionally triggers Apify submitter
+10. **Webhook Response** - Returns processing results
 
-### 1. Webhook Trigger
-- Receives POST requests from Apify scraper
-- Validates incoming data structure
-- Triggers workflow execution
+## [MANUAL] Import and Setup Instructions
 
-### 2. Data Validation
-- Validates webhook source is "upwork-scraper"
-- Ensures required data fields are present
-- Routes to error handling if invalid
+### 1. Import Workflow into n8n
 
-### 3. Job Scoring
-- Applies multi-criteria scoring algorithm
-- Categorizes jobs into high/medium/low score buckets
-- Provides detailed scoring reasons
+#### Method 1: Direct Import
+1. **Open n8n interface** (usually http://localhost:5678)
+2. **Click "Import from File"** or use Ctrl+O
+3. **Select** `upwork_automation_workflow.json`
+4. **Click "Import"** to add the workflow
 
-### 4. High-Score Job Processing
-- Filters jobs with score ≥70
-- Generates personalized proposals
-- Calculates optimal bid amounts
-- Estimates project timelines
+#### Method 2: Copy/Paste
+1. **Open n8n interface**
+2. **Click "New Workflow"**
+3. **Click the three dots menu** → "Import from Clipboard"
+4. **Copy the contents** of `upwork_automation_workflow.json`
+5. **Paste and click "Import"**
 
-### 5. Google Sheets Logging
-- Logs all processed jobs with scores and reasons
-- Tracks submission status and results
-- Provides analytics and reporting data
+### 2. Set Up Environment Variables
 
-### 6. Auto-Submission
-- Triggers Apify submitter actor
-- Passes job data and proposal content
-- Handles submission results
+Configure the following environment variables in n8n:
 
-## Scoring Algorithm
+#### Required Variables
+```bash
+# Apify Configuration
+APIFY_TOKEN=your_apify_api_token
+APIFY_SUBMIT_ACTOR_ID=your_submit_actor_id
+APIFY_USERNAME=your_upwork_username
+APIFY_PASSWORD=your_upwork_password
 
-The workflow uses a comprehensive scoring system:
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
 
-### Budget Scoring (0-30 points)
-- **$1,000-$5,000**: 30 points (optimal range)
-- **$500-$1,000**: 20 points (decent budget)
-- **>$5,000**: 25 points (high budget)
-- **<$500**: 5 points (low budget)
+# Storage Configuration
+STORAGE_TARGET=postgres  # or "sheets"
+SHEETS_ID=your_google_sheets_id
 
-### Skills Matching (0-25 points)
-- **3+ preferred skills**: 25 points
-- **2 preferred skills**: 15 points
-- **1 preferred skill**: 10 points
-- **No matches**: 0 points
+# PostgreSQL Configuration (if using postgres)
+PG_HOST=localhost
+PG_PORT=5432
+PG_DATABASE=n8n
+PG_USER=n8n
+PG_PASSWORD=your_postgres_password
 
-### Client Quality (0-20 points)
-- **Rating ≥4.5**: 15 points
-- **Rating ≥4.0**: 10 points
-- **Has spending history**: 5 points
+# Optional Configuration
+AUTO_SUBMIT=false  # Set to "true" to enable auto-submission
+```
 
-### Competition Level (0-15 points)
-- **≤5 proposals**: 15 points (low competition)
-- **6-15 proposals**: 10 points (moderate)
-- **16-30 proposals**: 5 points (high)
-- **>30 proposals**: 0 points (very high)
+### 3. Configure Credentials
 
-### Job Type Preference (0-10 points)
-- **Fixed price**: 10 points
-- **Hourly**: 5 points
+#### OpenAI Credentials
+1. **Go to Settings** → **Credentials**
+2. **Click "Add Credential"**
+3. **Select "OpenAI"**
+4. **Enter your OpenAI API key**
+5. **Test the connection**
+6. **Save the credential**
 
-## Configuration
+#### Google Sheets Credentials
+1. **Go to Settings** → **Credentials**
+2. **Click "Add Credential"**
+3. **Select "Google Sheets OAuth2 API"**
+4. **Follow the OAuth flow** or upload service account JSON
+5. **Test the connection**
+6. **Save the credential**
 
-### Environment Variables
-See `env-notes.md` for complete environment configuration.
+#### PostgreSQL Credentials (if using postgres)
+1. **Go to Settings** → **Credentials**
+2. **Click "Add Credential"**
+3. **Select "Postgres"**
+4. **Enter database connection details**
+5. **Test the connection**
+6. **Save the credential**
 
-### Key Settings
-- **High Score Threshold**: 70+ points (auto-submit)
-- **Medium Score Threshold**: 50-69 points (manual review)
-- **Low Score Threshold**: <50 points (skip)
+### 4. Set Up Google Sheets
 
-### Preferred Skills
-The workflow looks for these skills in job descriptions:
-- React, Node.js, JavaScript, TypeScript
-- Python, API, Database
-- (Customizable in the Code node)
+#### Create Spreadsheet
+1. **Create a new Google Sheets spreadsheet**
+2. **Name it** "Upwork Automation Log"
+3. **Create the following sheets**:
+   - `upwork_jobs` (for job data storage)
+   - `upwork_automation_log` (for processing logs)
 
-## [MANUAL] Setup Steps
+#### Set Up Headers
+**upwork_jobs sheet:**
+```
+jobUrl | title | description | budget | hourly | posted | country | paymentVerified | proposals | skills | clientSpending | clientJobs | location | scrapedAt | mergedAt
+```
 
-1. **Start n8n Infrastructure**
-   ```bash
-   cd ../infra
-   docker-compose up -d
-   ```
+**upwork_automation_log sheet:**
+```
+timestamp | jobUrl | title | aiScore | aiReasons | proposal | budget | hourly | proposals | paymentVerified | country | clientSpending | skills | scrapedAt | scoredAt | proposalGeneratedAt
+```
 
-2. **Configure Environment Variables**
-   - Copy `env.example` to `.env`
-   - Fill in all required values (see `env-notes.md`)
+#### Share with Service Account
+1. **Get your service account email** from the credentials
+2. **Share the spreadsheet** with the service account email
+3. **Give "Editor" permissions**
 
-3. **Set up Google Sheets**
-   - Create spreadsheet and service account
-   - Download credentials JSON
-   - Share spreadsheet with service account
+### 5. Test the Workflow
 
-4. **Deploy Workflow**
-   ```bash
-   pnpm deploy
-   ```
+#### Test Webhook Endpoint
+```bash
+curl -X POST http://localhost:5678/webhook/upwork_ingest \
+  -H "Content-Type: application/json" \
+  -d '{"datasetId": "your_test_dataset_id"}'
+```
 
-5. **Test Webhook**
-   - Send test POST request to webhook URL
-   - Verify workflow execution in n8n UI
+#### Monitor Execution
+1. **Go to Executions tab** in n8n
+2. **Check for successful runs**
+3. **Review any error messages**
+4. **Verify data in Google Sheets**
 
-6. **Monitor and Adjust**
-   - Review job scoring results
-   - Adjust scoring criteria as needed
-   - Monitor submission success rates
+## Workflow Configuration
 
-## Workflow Files
+### AI Scoring System
 
-- `workflows/upwork-automation.json`: Main workflow definition
-- `scripts/deploy-workflow.js`: Deployment script
-- `scripts/export-workflow.js`: Export script
-- `env-notes.md`: Environment configuration guide
+The workflow uses two AI prompts for job processing:
 
-## Integration Points
+#### Lead Scoring Prompt
+```
+You score Upwork jobs 0–100 for a DevOps + AI/n8n expert. 
+Penalize low budget (<$500 fixed or <$30/hr), >15 proposals. 
+Boost payment verified, Jenkins/Maximo/n8n/LLMs/Docker/Cloudflare Workers/Supabase, US/UK/EU clients, client spend >$10k. 
+Return JSON: {"score": int, "reasons": "..."} only.
+```
 
-### Input (Webhook)
-- Receives job data from Apify scraper
-- Validates data structure and source
+#### Proposal Generation Prompt
+```
+Write a concise Upwork proposal (120–180 words). 
+Sections: (1) one-line value proposition tailored to the job, 
+(2) three bullet wins aligned to requirements, 
+(3) a 3-step mini-plan, 
+(4) one relevant case link placeholder: {{CASE_LINK}}. 
+No fluff. Mirror client keywords. Output plain text.
+```
 
-### Output (Google Sheets)
-- Logs all processed jobs
-- Tracks scores, reasons, and status
+### Scoring Criteria
 
-### Output (Apify Submitter)
-- Triggers proposal submission
-- Passes job data and proposal content
+**Positive Factors (+points):**
+- Payment verified clients
+- DevOps/AI skills (Jenkins, Docker, n8n, LLMs, etc.)
+- US/UK/EU clients
+- Client spending >$10k
+- Budget >$500 fixed or >$30/hr
+
+**Negative Factors (-points):**
+- Low budget (<$500 fixed or <$30/hr)
+- High competition (>15 proposals)
+- Unverified clients
+- Non-US/UK/EU clients
+
+### Thresholds
+- **Score >= 70**: Generate proposal and optionally auto-submit
+- **Score < 70**: Log job but skip proposal generation
+
+## Data Flow
+
+### Input Data
+```json
+{
+  "datasetId": "apify_dataset_id_here"
+}
+```
+
+### Processed Job Data
+```json
+{
+  "jobUrl": "https://www.upwork.com/jobs/~abc123",
+  "title": "React Developer Needed",
+  "description": "Full job description...",
+  "budget": 2500,
+  "hourly": null,
+  "posted": "2 hours ago",
+  "country": "United States",
+  "paymentVerified": true,
+  "proposals": 8,
+  "skills": ["React", "JavaScript", "Node.js"],
+  "clientSpending": "$10k+ spent",
+  "clientJobs": "15 jobs posted",
+  "location": "New York, NY",
+  "aiScore": 85,
+  "aiReasons": "High budget, payment verified, US client, relevant skills",
+  "proposal": "Generated proposal text...",
+  "scrapedAt": "2024-01-01T12:00:00Z",
+  "scoredAt": "2024-01-01T12:05:00Z",
+  "proposalGeneratedAt": "2024-01-01T12:06:00Z"
+}
+```
+
+## Error Handling
+
+### OpenAI Failures
+- If OpenAI API fails, score is set to 0
+- Job is still logged with error message
+- Workflow continues processing other jobs
+
+### Storage Failures
+- PostgreSQL and Google Sheets have separate error handling
+- Failed storage operations are logged
+- Workflow continues with other jobs
+
+### Webhook Failures
+- Invalid input returns error response
+- Missing datasetId triggers error response
+- All errors are logged for debugging
+
+## Monitoring and Maintenance
+
+### Regular Checks
+1. **Monitor execution logs** for errors
+2. **Check Google Sheets** for data quality
+3. **Review AI scoring** accuracy
+4. **Update scoring criteria** as needed
+
+### Performance Optimization
+- **Adjust OpenAI model** (gpt-4 vs gpt-3.5-turbo)
+- **Modify scoring thresholds** based on results
+- **Optimize proposal templates** for better conversion
+- **Fine-tune AI prompts** for better accuracy
+
+### Troubleshooting
+
+#### Common Issues
+1. **OpenAI API errors**
+   - Check API key validity
+   - Verify rate limits
+   - Check model availability
+
+2. **Google Sheets errors**
+   - Verify credentials
+   - Check sheet permissions
+   - Ensure headers match
+
+3. **Apify integration errors**
+   - Verify API token
+   - Check actor IDs
+   - Confirm dataset exists
+
+#### Debug Mode
+Enable debug logging in n8n:
+1. **Go to Settings** → **Log Level**
+2. **Set to "Debug"**
+3. **Restart n8n**
+4. **Check detailed logs**
+
+## Security Considerations
+
+### API Keys
+- **Store securely** in n8n credentials
+- **Rotate regularly** for security
+- **Use environment variables** in production
+
+### Data Privacy
+- **Job data** may contain sensitive information
+- **Proposals** should be reviewed before submission
+- **Logs** should be secured and monitored
+
+### Rate Limiting
+- **OpenAI API** has rate limits
+- **Apify API** has usage limits
+- **Monitor usage** and adjust accordingly
+
+## Integration with Apify Scraper
+
+### Webhook Configuration
+The workflow expects webhook calls with:
+```json
+{
+  "datasetId": "apify_dataset_id"
+}
+```
+
+### Apify Scraper Setup
+Configure your Apify scraper to call the webhook:
+```javascript
+// In your Apify scraper
+await Actor.pushData({
+  // ... job data
+});
+
+// Call webhook after scraping
+await axios.post('http://your-n8n-instance/webhook/upwork_ingest', {
+  datasetId: Actor.getDatasetId()
+});
+```
+
+## Customization
+
+### Modify Scoring Criteria
+Edit the OpenAI system prompt in the "OpenAI Lead Score" node to adjust scoring criteria.
+
+### Change Proposal Template
+Modify the "OpenAI Proposal Draft" node system prompt to change proposal format.
+
+### Add New Storage Options
+Add new nodes after "Storage Target Check" for additional storage options (e.g., Airtable, Notion).
+
+### Custom Notifications
+Add Slack/Telegram nodes after "Log to Google Sheets" for custom notifications.
 
 ## Dependencies
 
-- `axios`: HTTP requests for API calls
-- `dotenv`: Environment variable management
-- n8n platform for workflow execution
-- Google Sheets API for logging
-- Apify API for actor triggering
+- **n8n**: Workflow automation platform
+- **OpenAI API**: AI scoring and proposal generation
+- **Google Sheets API**: Data logging and storage
+- **PostgreSQL**: Optional database storage
+- **Apify API**: Job data retrieval and submission
+
+## License
+
+MIT License - see LICENSE file for details.

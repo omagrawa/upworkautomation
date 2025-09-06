@@ -1,0 +1,56 @@
+{
+  "title": "Upwork Job Scraper Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "searches": {
+      "title": "Search URLs",
+      "type": "array",
+      "description": "Array of Upwork search URLs with filters applied",
+      "items": {
+        "type": "string",
+        "description": "Full Upwork search URL with filters"
+      },
+      "default": [
+        "https://www.upwork.com/nx/search/jobs/?q=react%20developer&sort=recency"
+      ]
+    },
+    "sessionCookie": {
+      "title": "Session Cookie",
+      "type": "string",
+      "description": "Raw cookie string from Upwork session (e.g., odesk=...; session=...)",
+      "default": ""
+    },
+    "maxPagesPerSearch": {
+      "title": "Maximum Pages Per Search",
+      "type": "integer",
+      "description": "Maximum number of pages to scrape per search URL",
+      "default": 3,
+      "minimum": 1,
+      "maximum": 10
+    },
+    "fetchDetails": {
+      "title": "Fetch Job Details",
+      "type": "boolean",
+      "description": "Whether to fetch detailed information for each job",
+      "default": true
+    },
+    "maxConcurrency": {
+      "title": "Maximum Concurrency",
+      "type": "integer",
+      "description": "Maximum number of concurrent requests",
+      "default": 5,
+      "minimum": 1,
+      "maximum": 20
+    },
+    "requestDelay": {
+      "title": "Request Delay (ms)",
+      "type": "integer",
+      "description": "Delay between requests in milliseconds",
+      "default": 2000,
+      "minimum": 1000,
+      "maximum": 10000
+    }
+  },
+  "required": ["searches", "sessionCookie"]
+}

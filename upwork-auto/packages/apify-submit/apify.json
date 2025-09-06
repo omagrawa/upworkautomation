@@ -1,0 +1,12 @@
+{
+  "actorSpecification": 1,
+  "name": "upwork-job-submitter",
+  "title": "Upwork Job Submitter",
+  "description": "Automatically submits proposals to Upwork jobs with session authentication",
+  "version": "1.0.0",
+  "meta": {
+    "templateId": "puppeteer-chrome"
+  },
+  "input": "./INPUT_SCHEMA.json",
+  "dockerfile": "./Dockerfile"
+}

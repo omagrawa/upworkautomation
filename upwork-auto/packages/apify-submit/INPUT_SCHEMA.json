@@ -1,0 +1,68 @@
+{
+  "title": "Upwork Job Submitter Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "sessionCookie": {
+      "title": "Session Cookie",
+      "type": "string",
+      "description": "Raw cookie string from Upwork session (e.g., odesk=...; session=...)",
+      "default": ""
+    },
+    "jobUrl": {
+      "title": "Job URL",
+      "type": "string",
+      "description": "Full URL to the Upwork job posting",
+      "default": ""
+    },
+    "proposalText": {
+      "title": "Proposal Text",
+      "type": "string",
+      "description": "Cover letter/proposal text to submit",
+      "default": ""
+    },
+    "hourlyRate": {
+      "title": "Hourly Rate",
+      "type": "number",
+      "description": "Hourly rate to bid (for hourly jobs)",
+      "default": 40,
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "connectsConfirm": {
+      "title": "Confirm Connects Usage",
+      "type": "boolean",
+      "description": "Whether to confirm connects usage when prompted",
+      "default": true
+    },
+    "maxRetries": {
+      "title": "Maximum Retries",
+      "type": "integer",
+      "description": "Maximum number of retry attempts for failed operations",
+      "default": 3,
+      "minimum": 1,
+      "maximum": 10
+    },
+    "delayBetweenActions": {
+      "title": "Delay Between Actions (ms)",
+      "type": "integer",
+      "description": "Delay between browser actions in milliseconds",
+      "default": 2000,
+      "minimum": 1000,
+      "maximum": 10000
+    },
+    "headless": {
+      "title": "Headless Mode",
+      "type": "boolean",
+      "description": "Run browser in headless mode",
+      "default": true
+    },
+    "takeScreenshot": {
+      "title": "Take Screenshot",
+      "type": "boolean",
+      "description": "Take screenshot of final result page",
+      "default": true
+    }
+  },
+  "required": ["sessionCookie", "jobUrl", "proposalText"]
+}

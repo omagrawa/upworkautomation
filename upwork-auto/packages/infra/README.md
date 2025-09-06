@@ -1,53 +1,19 @@
 # Infrastructure Package
 
-This package contains Docker Compose configuration for running the complete Upwork automation infrastructure, including n8n, PostgreSQL, Adminer, Redis, and Nginx.
+This package contains Docker Compose configuration for running the Upwork automation infrastructure with n8n, PostgreSQL, and Adminer.
 
 ## Purpose
 
-- Provides complete infrastructure setup for the automation pipeline
-- Manages all services with Docker Compose
+- Provides infrastructure setup for the automation pipeline
+- Manages services with Docker Compose
 - Includes database, workflow engine, and web interfaces
-- Supports both development and production configurations
 - Handles service dependencies and health checks
 
 ## Services
 
-### Core Services
+- **PostgreSQL**: Database for n8n workflows and data storage
 - **n8n**: Workflow automation platform
-- **PostgreSQL**: Database for n8n and custom logging
 - **Adminer**: Web-based database management interface
-
-### Optional Services
-- **Redis**: Caching and queue management for n8n
-- **Nginx**: Reverse proxy with SSL termination (production)
-
-## Commands
-
-```bash
-# Start all services in development mode
-pnpm dev
-
-# Start all services in background
-pnpm start
-
-# Stop all services
-pnpm stop
-
-# Restart all services
-pnpm restart
-
-# View logs from all services
-pnpm logs
-
-# Clean up (remove volumes and containers)
-pnpm clean
-
-# Reset everything (clean + start)
-pnpm reset
-
-# Build custom images
-pnpm build
-```
 
 ## Quick Start
 
@@ -59,7 +25,7 @@ pnpm build
 
 2. **Start infrastructure:**
    ```bash
-   pnpm dev
+   docker compose up -d
    ```
 
 3. **Access services:**
@@ -67,169 +33,235 @@ pnpm build
    - Adminer: http://localhost:8080
    - PostgreSQL: localhost:5432
 
+## Commands
+
+```bash
+# Start all services
+docker compose up -d
+
+# Stop all services
+docker compose down
+
+# View logs
+docker compose logs -f
+
+# Restart services
+docker compose restart
+
+# Check service status
+docker compose ps
+```
+
 ## Service Details
+
+### PostgreSQL (Port 5432)
+- **Purpose**: Database for n8n workflows and job data
+- **Database**: n8n
+- **User**: n8n
+- **Features**: Health checks, persistent storage
 
 ### n8n (Port 5678)
 - **Purpose**: Workflow automation and orchestration
 - **Access**: http://localhost:5678
-- **Default Credentials**: admin / admin123
-- **Features**: Webhook endpoints, job scoring, proposal generation
-
-### PostgreSQL (Port 5432)
-- **Purpose**: Database for n8n workflows and custom logging
-- **Database**: n8n
-- **User**: n8n
-- **Features**: Automated backups, health checks, custom tables
+- **Features**: Webhook endpoints, AI job scoring, proposal generation
 
 ### Adminer (Port 8080)
 - **Purpose**: Web-based database management
 - **Access**: http://localhost:8080
 - **Features**: Query interface, table management, data export
 
-### Redis (Port 6379)
-- **Purpose**: Caching and queue management
-- **Features**: Session storage, workflow queues, performance optimization
-
-### Nginx (Ports 80/443)
-- **Purpose**: Reverse proxy and SSL termination
-- **Features**: Rate limiting, security headers, load balancing
-- **Profile**: production (use `--profile production` to enable)
-
-## Configuration
-
-### Environment Variables
-See `env.example` for complete configuration options.
-
-### Key Settings
-- **Database**: PostgreSQL with custom initialization scripts
-- **Security**: Basic auth for n8n, SSL for production
-- **Logging**: Configurable log levels and output
-- **Performance**: Optimized for automation workloads
-
-### Volume Mounts
-- **n8n_data**: Persistent workflow and credential storage
-- **postgres_data**: Database persistence
-- **redis_data**: Cache persistence
-- **credentials**: Google Sheets and API credentials
-
 ## [MANUAL] Setup Steps
 
 ### 1. Environment Configuration
 1. Copy `env.example` to `.env`
-2. Set secure passwords for all services
-3. Configure n8n API key and webhook URL
-4. Set up Google Sheets credentials path
-5. Configure Upwork credentials
+2. Set secure passwords for PostgreSQL
+3. Configure all required environment variables:
+   - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
+   - `N8N_PORT`, `N8N_WEBHOOK_URL`
+   - `APIFY_TOKEN`, `OPENAI_API_KEY`
+   - `STORAGE_TARGET`, `SHEETS_ID`
+   - `AUTO_SUBMIT`, `APIFY_USERNAME`, `APIFY_SUBMIT_ACTOR_ID`
 
-### 2. SSL Certificates (Production)
-1. Generate SSL certificates for HTTPS
-2. Place certificates in `nginx/ssl/` directory
-3. Update nginx configuration if needed
-4. Enable production profile: `--profile production`
-
-### 3. Google Sheets Credentials
-1. Create Google Cloud service account
-2. Download JSON credentials file
-3. Place in `credentials/google-sheets.json`
-4. Share spreadsheet with service account
-
-### 4. Database Initialization
-1. Start services: `pnpm start`
-2. Wait for PostgreSQL to initialize
-3. Verify custom tables are created
-4. Check n8n can connect to database
-
-### 5. n8n Configuration
-1. Access n8n at http://localhost:5678
-2. Complete initial setup wizard
-3. Generate API key in Settings
-4. Update environment variables
-5. Deploy workflows from n8n package
-
-## Production Deployment
-
-### Using Nginx Profile
+### 2. Start Services
 ```bash
-# Start with production profile
-docker-compose --profile production up -d
+docker compose up -d
 ```
 
-### SSL Configuration
-1. Obtain SSL certificates
-2. Place in `nginx/ssl/` directory:
-   - `cert.pem`: Certificate file
-   - `key.pem`: Private key file
-3. Update nginx configuration as needed
+### 3. n8n First-Run UI Credential Setup
+1. **Access n8n**: Open http://localhost:5678
+2. **Complete setup wizard**:
+   - Create admin account
+   - Set up initial configuration
+   - Choose database (PostgreSQL is already configured)
+3. **Generate API key**:
+   - Go to Settings → API Keys
+   - Create new API key
+   - Copy and save the key
+4. **Configure credentials**:
+   - Go to Settings → Credentials
+   - Add OpenAI credentials with your API key
+   - Add Google Sheets credentials (if using sheets storage)
 
-### Security Considerations
-- Change default passwords
-- Use strong database passwords
-- Enable SSL in production
-- Configure firewall rules
-- Regular security updates
+### 4. Import Workflow JSON
+1. **In n8n interface**:
+   - Click "Import from File" or use Ctrl+O
+   - Select `../n8n/upwork_automation_workflow.json`
+   - Click "Import"
+2. **Verify workflow**:
+   - Check all nodes are properly connected
+   - Verify environment variables are set
+   - Test webhook endpoint
 
-## Monitoring and Maintenance
+### 5. Configure Google Sheets or Postgres Credentials
 
-### Health Checks
-All services include health checks:
-- PostgreSQL: Connection and query tests
-- n8n: HTTP endpoint availability
-- Redis: Connection and ping tests
+#### For Google Sheets Storage:
+1. **Create Google Sheets spreadsheet**
+2. **Set up service account**:
+   - Go to Google Cloud Console
+   - Create service account
+   - Download JSON credentials
+3. **In n8n**:
+   - Go to Settings → Credentials
+   - Add Google Sheets credential
+   - Upload service account JSON
+4. **Share spreadsheet** with service account email
 
-### Logging
-- Centralized logging via Docker Compose
-- Configurable log levels per service
-- Log rotation and retention policies
+#### For PostgreSQL Storage:
+1. **PostgreSQL is already configured** in Docker Compose
+2. **Create required tables**:
+   ```sql
+   CREATE TABLE IF NOT EXISTS upwork_jobs (
+     jobUrl VARCHAR(500) PRIMARY KEY,
+     title TEXT,
+     description TEXT,
+     budget INTEGER,
+     hourly DECIMAL,
+     posted VARCHAR(100),
+     country VARCHAR(100),
+     paymentVerified BOOLEAN,
+     proposals INTEGER,
+     skills TEXT,
+     clientSpending VARCHAR(100),
+     clientJobs VARCHAR(100),
+     location VARCHAR(200),
+     scrapedAt TIMESTAMP,
+     mergedAt TIMESTAMP
+   );
+   ```
+3. **Test connection** in n8n credentials
 
-### Backups
-- Database backups via PostgreSQL dumps
-- n8n workflow exports
-- Credential and configuration backups
+## Environment Variables
+
+### Required Variables
+```bash
+# PostgreSQL Database
+POSTGRES_USER=n8n
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=n8n
+
+# n8n Configuration
+N8N_PORT=5678
+N8N_WEBHOOK_URL=http://localhost:5678
+
+# Apify Integration
+APIFY_TOKEN=your_apify_token
+APIFY_USERNAME=your_upwork_username
+APIFY_SUBMIT_ACTOR_ID=your_submit_actor_id
+
+# OpenAI Integration
+OPENAI_API_KEY=your_openai_api_key
+
+# Storage Configuration
+STORAGE_TARGET=postgres  # or "sheets"
+SHEETS_ID=your_google_sheets_id
+
+# PostgreSQL Connection (for n8n workflow)
+PGHOST=postgres
+PGUSER=n8n
+PGPASSWORD=your_secure_password
+PGDATABASE=n8n
+PGPORT=5432
+
+# Auto-submission
+AUTO_SUBMIT=false  # Set to "true" to enable
+```
+
+## Testing the Setup
+
+### 1. Test Webhook Endpoint
+```bash
+curl -X POST http://localhost:5678/webhook/upwork_ingest \
+  -H "Content-Type: application/json" \
+  -d '{"datasetId": "test_dataset_id"}'
+```
+
+### 2. Check Service Health
+```bash
+# Check all services are running
+docker compose ps
+
+# Check n8n health
+curl http://localhost:5678/healthz
+
+# Check PostgreSQL connection
+docker compose exec postgres pg_isready -U n8n -d n8n
+```
+
+### 3. Verify Database
+1. **Access Adminer**: http://localhost:8080
+2. **Login with**:
+   - Server: postgres
+   - Username: n8n
+   - Password: your_postgres_password
+   - Database: n8n
+3. **Check tables** are created properly
 
 ## Troubleshooting
 
 ### Common Issues
 
 1. **Services won't start**
-   - Check port conflicts
-   - Verify environment variables
-   - Review Docker logs
+   ```bash
+   # Check logs
+   docker compose logs
+   
+   # Check environment variables
+   cat .env
+   ```
 
-2. **Database connection fails**
-   - Wait for PostgreSQL initialization
-   - Check credentials and permissions
-   - Verify network connectivity
+2. **n8n can't connect to database**
+   ```bash
+   # Check PostgreSQL is running
+   docker compose ps postgres
+   
+   # Check database logs
+   docker compose logs postgres
+   ```
 
-3. **n8n webhook not accessible**
-   - Check firewall settings
-   - Verify port forwarding
-   - Test webhook endpoint
-
-4. **SSL certificate errors**
-   - Verify certificate files
-   - Check file permissions
-   - Update nginx configuration
+3. **Webhook not accessible**
+   ```bash
+   # Check n8n is running
+   docker compose ps n8n
+   
+   # Check n8n logs
+   docker compose logs n8n
+   ```
 
 ### Debug Commands
 ```bash
-# Check service status
-docker-compose ps
-
-# View specific service logs
-docker-compose logs n8n
-docker-compose logs postgres
+# View service logs
+docker compose logs -f [service_name]
 
 # Execute commands in containers
-docker-compose exec n8n sh
-docker-compose exec postgres psql -U n8n -d n8n
+docker compose exec postgres psql -U n8n -d n8n
+docker compose exec n8n sh
 
-# Check network connectivity
-docker-compose exec n8n ping postgres
+# Restart specific service
+docker compose restart [service_name]
 ```
 
 ## Dependencies
 
 - Docker and Docker Compose
-- SSL certificates (for production)
-- Google Sheets credentials
 - Environment configuration
+- API keys and credentials
