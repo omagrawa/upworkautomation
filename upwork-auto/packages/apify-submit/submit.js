@@ -13,8 +13,41 @@ const {
     maxRetries = 3,
     delayBetweenActions = 2000,
     headless = true,
-    takeScreenshot = true
+    takeScreenshot = true,
+    retryDelay = 5000
 } = input;
+
+// User agent rotation list
+const USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/121.0'
+];
+
+// Retry with exponential backoff
+async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (attempt === maxRetries) {
+                throw error;
+            }
+            
+            const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+            console.log(`Attempt ${attempt} failed, retrying in ${Math.round(delay)}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
+// Get random user agent
+function getRandomUserAgent() {
+    return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
 
 console.log('Starting Upwork job submission with input:', {
     jobUrl,
@@ -43,7 +76,7 @@ const browser = await chromium.launch({
 });
 
 const context = await browser.newContext({
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    userAgent: getRandomUserAgent(),
     viewport: { width: 1920, height: 1080 }
 });
 
@@ -58,29 +91,53 @@ let result = {
 };
 
 try {
-    // Step 1: Set up authentication
+    // Step 1: Set up authentication with retry
     console.log('Setting up authentication...');
-    await setCookiesFromString(page, sessionCookie);
+    await retryWithBackoff(
+        () => setCookiesFromString(page, sessionCookie),
+        maxRetries,
+        retryDelay
+    );
     
-    // Step 2: Navigate to job page
+    // Step 2: Navigate to job page with retry
     console.log('Navigating to job page...');
-    await navigateToJob(page, jobUrl);
+    await retryWithBackoff(
+        () => navigateToJob(page, jobUrl),
+        maxRetries,
+        retryDelay
+    );
     
-    // Step 3: Click Apply button
+    // Step 3: Click Apply button with retry
     console.log('Clicking Apply button...');
-    await clickApplyButton(page);
+    await retryWithBackoff(
+        () => clickApplyButton(page),
+        maxRetries,
+        retryDelay
+    );
     
-    // Step 4: Wait for and fill cover letter
+    // Step 4: Wait for and fill cover letter with retry
     console.log('Filling cover letter...');
-    await fillCoverLetter(page, proposalText);
+    await retryWithBackoff(
+        () => fillCoverLetter(page, proposalText),
+        maxRetries,
+        retryDelay
+    );
     
-    // Step 5: Set hourly rate if applicable
+    // Step 5: Set hourly rate if applicable with retry
     console.log('Setting hourly rate...');
-    await setHourlyRate(page, hourlyRate);
+    await retryWithBackoff(
+        () => setHourlyRate(page, hourlyRate),
+        maxRetries,
+        retryDelay
+    );
     
-    // Step 6: Submit proposal
+    // Step 6: Submit proposal with retry
     console.log('Submitting proposal...');
-    await submitProposal(page, connectsConfirm);
+    await retryWithBackoff(
+        () => submitProposal(page, connectsConfirm),
+        maxRetries,
+        retryDelay
+    );
     
     // Step 7: Take screenshot if requested
     if (takeScreenshot) {
@@ -170,7 +227,7 @@ async function navigateToJob(page, jobUrl) {
 
 async function clickApplyButton(page) {
     try {
-        // Multiple selectors for Apply button
+        // Multiple selectors for Apply button with more fallbacks
         const applySelectors = [
             '[data-test="SubmitProposalButton"]',
             'button:has-text("Submit a Proposal")',
@@ -178,7 +235,15 @@ async function clickApplyButton(page) {
             'a:has-text("Submit a Proposal")',
             'a:has-text("Apply")',
             '.submit-proposal-button',
-            '.apply-button'
+            '.apply-button',
+            'button[data-test="ApplyButton"]',
+            'a[data-test="ApplyButton"]',
+            'button.submit-button',
+            'a.submit-button',
+            'button:has-text("Submit")',
+            'a:has-text("Submit")',
+            '.btn-apply',
+            '.btn-submit'
         ];
         
         let applyButton = null;
@@ -210,14 +275,22 @@ async function clickApplyButton(page) {
 
 async function fillCoverLetter(page, proposalText) {
     try {
-        // Wait for cover letter textarea to appear
+        // Wait for cover letter textarea to appear with more fallbacks
         const coverLetterSelectors = [
             '[data-test="CoverLetterTextarea"]',
             'textarea[name="coverLetter"]',
             'textarea[placeholder*="cover letter"]',
             'textarea[placeholder*="proposal"]',
             '.cover-letter textarea',
-            '.proposal-text textarea'
+            '.proposal-text textarea',
+            'textarea[name="proposal"]',
+            'textarea[name="message"]',
+            'textarea[placeholder*="message"]',
+            'textarea[placeholder*="letter"]',
+            '.message textarea',
+            '.proposal textarea',
+            'textarea.cover-letter',
+            'textarea.proposal-text'
         ];
         
         let coverLetterField = null;
@@ -252,14 +325,22 @@ async function fillCoverLetter(page, proposalText) {
 
 async function setHourlyRate(page, hourlyRate) {
     try {
-        // Look for hourly rate input field
+        // Look for hourly rate input field with more fallbacks
         const rateSelectors = [
             '[data-test="HourlyRateInput"]',
             'input[name="hourlyRate"]',
             'input[placeholder*="hourly rate"]',
             'input[placeholder*="rate"]',
             '.hourly-rate input',
-            '.rate-input input'
+            '.rate-input input',
+            'input[name="rate"]',
+            'input[name="bid"]',
+            'input[placeholder*="bid"]',
+            'input[placeholder*="amount"]',
+            '.bid input',
+            '.amount input',
+            'input[type="number"]',
+            'input[data-test="RateInput"]'
         ];
         
         let rateField = null;
@@ -292,14 +373,24 @@ async function setHourlyRate(page, hourlyRate) {
 
 async function submitProposal(page, connectsConfirm) {
     try {
-        // Look for submit/continue button
+        // Look for submit/continue button with more fallbacks
         const submitSelectors = [
             '[data-test="SubmitProposalButton"]',
             'button:has-text("Submit Proposal")',
             'button:has-text("Continue")',
             'button:has-text("Submit")',
             '.submit-proposal-button',
-            '.continue-button'
+            '.continue-button',
+            'button[data-test="SubmitButton"]',
+            'button[data-test="ContinueButton"]',
+            'button.submit-button',
+            'button.continue-button',
+            'button:has-text("Send")',
+            'button:has-text("Send Proposal")',
+            '.btn-submit',
+            '.btn-continue',
+            'input[type="submit"]',
+            'button[type="submit"]'
         ];
         
         let submitButton = null;
@@ -339,13 +430,22 @@ async function submitProposal(page, connectsConfirm) {
 
 async function handleConnectsConfirmation(page) {
     try {
-        // Look for connects confirmation dialog
+        // Look for connects confirmation dialog with more fallbacks
         const connectsSelectors = [
             'button:has-text("Confirm")',
             'button:has-text("Use Connects")',
             'button:has-text("Continue")',
             '.confirm-connects-button',
-            '.use-connects-button'
+            '.use-connects-button',
+            'button[data-test="ConfirmConnects"]',
+            'button[data-test="UseConnects"]',
+            'button:has-text("Yes")',
+            'button:has-text("OK")',
+            'button:has-text("Accept")',
+            '.btn-confirm',
+            '.btn-accept',
+            'button.confirm',
+            'button.accept'
         ];
         
         for (const selector of connectsSelectors) {

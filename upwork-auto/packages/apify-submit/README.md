@@ -112,12 +112,59 @@ A production-ready Apify actor that automatically submits proposals to Upwork jo
 
 The actor pushes the following data to the Apify dataset:
 
+### Sample Dataset Items
+
+#### Successful Submission
 ```json
 {
   "status": "success",
-  "finalUrl": "https://www.upwork.com/jobs/~XXXX/",
-  "screenshotPath": "screenshot-1234567890.png",
+  "finalUrl": "https://www.upwork.com/jobs/~abc123def456/",
+  "screenshotPath": "screenshot-1704110400000.png",
   "error": "",
+  "submittedAt": "2024-01-01T12:00:00Z"
+}
+```
+
+#### Failed Submission (Job No Longer Available)
+```json
+{
+  "status": "failed",
+  "finalUrl": "https://www.upwork.com/jobs/~xyz789abc123/",
+  "screenshotPath": "screenshot-1704110400001.png",
+  "error": "Job is no longer available",
+  "submittedAt": "2024-01-01T12:00:00Z"
+}
+```
+
+#### Failed Submission (Already Applied)
+```json
+{
+  "status": "failed",
+  "finalUrl": "https://www.upwork.com/jobs/~def456ghi789/",
+  "screenshotPath": "screenshot-1704110400002.png",
+  "error": "Already applied to this job",
+  "submittedAt": "2024-01-01T12:00:00Z"
+}
+```
+
+#### Failed Submission (Form Field Not Found)
+```json
+{
+  "status": "failed",
+  "finalUrl": "https://www.upwork.com/jobs/~ghi789jkl012/",
+  "screenshotPath": "screenshot-1704110400003.png",
+  "error": "Cover letter field not found",
+  "submittedAt": "2024-01-01T12:00:00Z"
+}
+```
+
+#### Failed Submission (Network Error)
+```json
+{
+  "status": "failed",
+  "finalUrl": "https://www.upwork.com/jobs/~jkl012mno345/",
+  "screenshotPath": "screenshot-1704110400004.png",
+  "error": "Failed to navigate to job page: net::ERR_CONNECTION_TIMED_OUT",
   "submittedAt": "2024-01-01T12:00:00Z"
 }
 ```
