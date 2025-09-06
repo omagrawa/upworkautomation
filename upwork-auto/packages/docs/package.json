@@ -1,0 +1,14 @@
+{
+  "name": "@upwork-auto/docs",
+  "version": "1.0.0",
+  "description": "Documentation for Upwork automation pipeline including runbooks and manual setup steps",
+  "main": "index.js",
+  "scripts": {
+    "dev": "echo 'Documentation is in Markdown format - view with any Markdown viewer'",
+    "build": "echo 'No build step required'",
+    "serve": "python3 -m http.server 8000",
+    "clean": "echo 'No clean step required'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

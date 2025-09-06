@@ -1,0 +1,297 @@
+{
+  "name": "Upwork Automation Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "upwork-jobs",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "upwork-jobs-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "validate-data",
+              "leftValue": "={{ $json.source }}",
+              "rightValue": "upwork-scraper",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "validate-webhook",
+      "name": "Validate Webhook Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Job scoring algorithm\nconst jobs = $input.all()[0].json.jobs || [];\nconst scoredJobs = [];\n\nfor (const job of jobs) {\n  let score = 0;\n  const reasons = [];\n  \n  // Budget scoring (0-30 points)\n  if (job.budget) {\n    if (job.budget >= 1000 && job.budget <= 5000) {\n      score += 30;\n      reasons.push('Good budget range');\n    } else if (job.budget >= 500 && job.budget < 1000) {\n      score += 20;\n      reasons.push('Decent budget');\n    } else if (job.budget > 5000) {\n      score += 25;\n      reasons.push('High budget');\n    } else {\n      score += 5;\n      reasons.push('Low budget');\n    }\n  } else if (job.hourlyRate) {\n    const estimatedBudget = job.hourlyRate * 40; // 40 hours estimate\n    if (estimatedBudget >= 1000 && estimatedBudget <= 5000) {\n      score += 25;\n      reasons.push('Good hourly rate');\n    } else if (estimatedBudget >= 500 && estimatedBudget < 1000) {\n      score += 15;\n      reasons.push('Decent hourly rate');\n    } else {\n      score += 5;\n      reasons.push('Low hourly rate');\n    }\n  }\n  \n  // Skills matching (0-25 points)\n  const preferredSkills = ['React', 'Node.js', 'JavaScript', 'TypeScript', 'Python', 'API', 'Database'];\n  const jobSkills = job.skills || [];\n  const matchingSkills = jobSkills.filter(skill => \n    preferredSkills.some(pref => skill.toLowerCase().includes(pref.toLowerCase()))\n  );\n  \n  if (matchingSkills.length >= 3) {\n    score += 25;\n    reasons.push(`Strong skill match: ${matchingSkills.join(', ')}`);\n  } else if (matchingSkills.length >= 2) {\n    score += 15;\n    reasons.push(`Good skill match: ${matchingSkills.join(', ')}`);\n  } else if (matchingSkills.length >= 1) {\n    score += 10;\n    reasons.push(`Some skill match: ${matchingSkills.join(', ')}`);\n  } else {\n    score += 0;\n    reasons.push('No preferred skills match');\n  }\n  \n  // Client quality (0-20 points)\n  if (job.clientInfo) {\n    if (job.clientInfo.rating && parseFloat(job.clientInfo.rating) >= 4.5) {\n      score += 15;\n      reasons.push('High client rating');\n    } else if (job.clientInfo.rating && parseFloat(job.clientInfo.rating) >= 4.0) {\n      score += 10;\n      reasons.push('Good client rating');\n    }\n    \n    if (job.clientInfo.totalSpent && job.clientInfo.totalSpent.includes('$')) {\n      score += 5;\n      reasons.push('Client has spending history');\n    }\n  }\n  \n  // Competition level (0-15 points)\n  if (job.proposals) {\n    if (job.proposals <= 5) {\n      score += 15;\n      reasons.push('Low competition');\n    } else if (job.proposals <= 15) {\n      score += 10;\n      reasons.push('Moderate competition');\n    } else if (job.proposals <= 30) {\n      score += 5;\n      reasons.push('High competition');\n    } else {\n      score += 0;\n      reasons.push('Very high competition');\n    }\n  }\n  \n  // Job type preference (0-10 points)\n  if (job.jobType === 'fixed') {\n    score += 10;\n    reasons.push('Fixed price job');\n  } else if (job.jobType === 'hourly') {\n    score += 5;\n    reasons.push('Hourly job');\n  }\n  \n  // Add scored job to results\n  scoredJobs.push({\n    ...job,\n    score,\n    reasons,\n    scoredAt: new Date().toISOString()\n  });\n}\n\n// Sort by score (highest first)\nscoredJobs.sort((a, b) => b.score - a.score);\n\n// Return top jobs for different actions\nconst highScoreJobs = scoredJobs.filter(job => job.score >= 70);\nconst mediumScoreJobs = scoredJobs.filter(job => job.score >= 50 && job.score < 70);\nconst lowScoreJobs = scoredJobs.filter(job => job.score < 50);\n\nreturn {\n  allJobs: scoredJobs,\n  highScoreJobs,\n  mediumScoreJobs,\n  lowScoreJobs,\n  summary: {\n    total: scoredJobs.length,\n    highScore: highScoreJobs.length,\n    mediumScore: mediumScoreJobs.length,\n    lowScore: lowScoreJobs.length,\n    averageScore: Math.round(scoredJobs.reduce((sum, job) => sum + job.score, 0) / scoredJobs.length)\n  }\n};"
+      },
+      "id": "score-jobs",
+      "name": "Score Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-high-score",
+              "leftValue": "={{ $json.highScoreJobs.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-high-score",
+      "name": "Check High Score Jobs",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate proposal content for high-score jobs\nconst highScoreJobs = $input.all()[0].json.highScoreJobs || [];\nconst proposals = [];\n\nfor (const job of highScoreJobs) {\n  // Generate personalized cover letter\n  const coverLetter = generateCoverLetter(job);\n  \n  // Calculate bid amount\n  const bidAmount = calculateBidAmount(job);\n  \n  // Estimate timeline\n  const timeline = estimateTimeline(job);\n  \n  proposals.push({\n    jobId: job.id,\n    jobTitle: job.title,\n    jobUrl: job.url,\n    score: job.score,\n    reasons: job.reasons,\n    coverLetter,\n    bidAmount,\n    timeline,\n    priority: 'high'\n  });\n}\n\nfunction generateCoverLetter(job) {\n  const skills = job.skills || [];\n  const matchingSkills = skills.slice(0, 3).join(', ');\n  \n  return `Hi there!\n\nI'm excited about this ${job.title} project. With my expertise in ${matchingSkills}, I'm confident I can deliver excellent results.\n\nKey highlights of my approach:\n- ${skills[0] || 'Technical expertise'} for robust implementation\n- Clean, maintainable code following best practices\n- Regular communication and progress updates\n- On-time delivery within the specified timeline\n\nI've successfully completed similar projects and would love to discuss how I can help bring your vision to life.\n\nBest regards,\n[Your Name]`;\n}\n\nfunction calculateBidAmount(job) {\n  if (job.budget) {\n    // For fixed-price jobs, bid 80-90% of budget\n    return Math.round(job.budget * 0.85);\n  } else if (job.hourlyRate) {\n    // For hourly jobs, estimate 40 hours\n    return Math.round(job.hourlyRate * 40 * 0.9);\n  }\n  return 1000; // Default bid\n}\n\nfunction estimateTimeline(job) {\n  const skills = job.skills || [];\n  const complexity = skills.length > 5 ? 'complex' : 'moderate';\n  \n  if (complexity === 'complex') {\n    return '2-3 weeks';\n  } else {\n    return '1-2 weeks';\n  }\n}\n\nreturn {\n  proposals,\n  count: proposals.length\n};"
+      },
+      "id": "generate-proposals",
+      "name": "Generate Proposals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": "={{ $env.GOOGLE_SHEETS_SPREADSHEET_ID }}",
+        "sheetName": "Job Log",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ new Date().toISOString() }}",
+            "jobId": "={{ $json.jobId }}",
+            "jobTitle": "={{ $json.jobTitle }}",
+            "jobUrl": "={{ $json.jobUrl }}",
+            "score": "={{ $json.score }}",
+            "reasons": "={{ $json.reasons.join('; ') }}",
+            "bidAmount": "={{ $json.bidAmount }}",
+            "timeline": "={{ $json.timeline }}",
+            "priority": "={{ $json.priority }}",
+            "status": "scored"
+          }
+        },
+        "options": {}
+      },
+      "id": "log-to-sheets",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://api.apify.com/v2/acts/{{ $env.APIFY_ACTOR_SUBMIT_ID }}/runs",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "apifyApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "upworkCredentials",
+              "value": "={{ { username: $env.UPWORK_USERNAME, password: $env.UPWORK_PASSWORD } }}"
+            },
+            {
+              "name": "jobData",
+              "value": "={{ { jobId: $json.jobId, jobUrl: $json.jobUrl, title: $json.jobTitle } }}"
+            },
+            {
+              "name": "proposalData",
+              "value": "={{ { coverLetter: $json.coverLetter, bidAmount: $json.bidAmount, timeline: $json.timeline } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-submission",
+      "name": "Trigger Apify Submission",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Jobs processed successfully', summary: $json.summary } }}"
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: false, message: 'Invalid webhook data', error: 'Source must be upwork-scraper' } }}"
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Webhook Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Webhook Data": {
+      "main": [
+        [
+          {
+            "node": "Score Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Jobs": {
+      "main": [
+        [
+          {
+            "node": "Check High Score Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check High Score Jobs": {
+      "main": [
+        [
+          {
+            "node": "Generate Proposals",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Proposals": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Trigger Apify Submission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Apify Submission": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "upwork-automation",
+      "name": "upwork-automation"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

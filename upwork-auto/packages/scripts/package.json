@@ -1,0 +1,14 @@
+{
+  "name": "@upwork-auto/scripts",
+  "version": "1.0.0",
+  "description": "Helper shell scripts for Upwork automation pipeline deployment and maintenance",
+  "main": "index.js",
+  "scripts": {
+    "dev": "echo 'Scripts are executable shell scripts - run directly'",
+    "build": "echo 'No build step required'",
+    "test": "bash scripts/test-all.sh",
+    "clean": "echo 'No clean step required'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

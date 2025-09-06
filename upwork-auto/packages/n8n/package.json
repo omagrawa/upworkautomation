@@ -1,0 +1,20 @@
+{
+  "name": "@upwork-auto/n8n",
+  "version": "1.0.0",
+  "description": "n8n workflow configuration for Upwork automation pipeline",
+  "main": "index.js",
+  "scripts": {
+    "dev": "echo 'n8n runs via Docker Compose - see infra package'",
+    "build": "echo 'No build step required'",
+    "deploy": "node scripts/deploy-workflow.js",
+    "export": "node scripts/export-workflow.js",
+    "clean": "rm -rf exports/"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}

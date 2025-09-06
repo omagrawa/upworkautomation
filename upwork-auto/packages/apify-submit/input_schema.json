@@ -1,0 +1,105 @@
+{
+  "title": "Upwork Job Submitter Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "upworkCredentials": {
+      "title": "Upwork Credentials",
+      "type": "object",
+      "description": "Upwork login credentials",
+      "properties": {
+        "username": {
+          "title": "Username/Email",
+          "type": "string",
+          "description": "Upwork username or email"
+        },
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "description": "Upwork password"
+        }
+      },
+      "required": ["username", "password"]
+    },
+    "jobData": {
+      "title": "Job Data",
+      "type": "object",
+      "description": "Job information to submit proposal for",
+      "properties": {
+        "jobId": {
+          "title": "Job ID",
+          "type": "string",
+          "description": "Upwork job ID"
+        },
+        "jobUrl": {
+          "title": "Job URL",
+          "type": "string",
+          "description": "Full URL to the job posting"
+        },
+        "title": {
+          "title": "Job Title",
+          "type": "string",
+          "description": "Job title for reference"
+        }
+      },
+      "required": ["jobId", "jobUrl"]
+    },
+    "proposalData": {
+      "title": "Proposal Data",
+      "type": "object",
+      "description": "Proposal content and settings",
+      "properties": {
+        "coverLetter": {
+          "title": "Cover Letter",
+          "type": "string",
+          "description": "Proposal cover letter text"
+        },
+        "bidAmount": {
+          "title": "Bid Amount",
+          "type": "number",
+          "description": "Bid amount for the job"
+        },
+        "timeline": {
+          "title": "Timeline",
+          "type": "string",
+          "description": "Estimated completion timeline"
+        },
+        "attachments": {
+          "title": "Attachments",
+          "type": "array",
+          "description": "File attachments for the proposal",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["coverLetter", "bidAmount"]
+    },
+    "settings": {
+      "title": "Submission Settings",
+      "type": "object",
+      "description": "Additional submission settings",
+      "properties": {
+        "maxRetries": {
+          "title": "Maximum Retries",
+          "type": "integer",
+          "description": "Maximum number of retry attempts",
+          "default": 3
+        },
+        "delayBetweenActions": {
+          "title": "Delay Between Actions (ms)",
+          "type": "integer",
+          "description": "Delay between browser actions in milliseconds",
+          "default": 2000
+        },
+        "headless": {
+          "title": "Headless Mode",
+          "type": "boolean",
+          "description": "Run browser in headless mode",
+          "default": true
+        }
+      }
+    }
+  },
+  "required": ["upworkCredentials", "jobData", "proposalData"]
+}

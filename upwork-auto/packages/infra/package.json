@@ -1,0 +1,18 @@
+{
+  "name": "@upwork-auto/infra",
+  "version": "1.0.0",
+  "description": "Infrastructure configuration for Upwork automation pipeline using Docker Compose",
+  "main": "index.js",
+  "scripts": {
+    "dev": "docker-compose up -d",
+    "build": "docker-compose build",
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "restart": "docker-compose restart",
+    "logs": "docker-compose logs -f",
+    "clean": "docker-compose down -v --remove-orphans",
+    "reset": "docker-compose down -v --remove-orphans && docker-compose up -d"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
