@@ -1,16 +1,29 @@
-FROM apify/actor-node-puppeteer-chrome:20-3.1.10
+FROM apify/actor-node-puppeteer-chrome:20
 
-# Copy package files
+# Use a writable workdir for myuser
+USER root
+RUN mkdir -p /home/myuser/app && chown -R myuser:myuser /home/myuser/app
+USER myuser
+WORKDIR /home/myuser/app
+
+# Copy only package metadata first
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --only=production
+# Keep npm quiet, avoid workspace auto-detect, skip Chromium download
+ENV NPM_CONFIG_WORKSPACES=false
+ENV NPM_CONFIG_LOGLEVEL=warn
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
 
-# Copy source code
-COPY . ./
+# Install deps (use ci if lockfile exists, else install)
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev ; \
+    else \
+      npm install --omit=dev ; \
+    fi
 
-# Set environment variables
-ENV APIFY_STORAGE_DIR=/apify_storage
+# Copy the rest
+COPY . .
 
-# Run the actor
+# Run the actor (no xvfb needed on this image)
 CMD ["node", "main.js"]
